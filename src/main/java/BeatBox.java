@@ -19,6 +19,8 @@ public class BeatBox {
 	private Sequence sequence;
 	private Track track;
 
+	private JFrame frame;
+
 	public BeatBox() {
 		instrumentMap.put("Bass Drum", 35);
 		instrumentMap.put("Closed Hi-Hat", 42);
@@ -43,7 +45,7 @@ public class BeatBox {
 	}
 
 	public void buildGUI() {
-		JFrame frame = new JFrame("Cyber BeatBox");
+		frame = new JFrame("Cyber BeatBox");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		BorderLayout layout = new BorderLayout();
 		JPanel background = new JPanel(layout);
@@ -204,6 +206,9 @@ public class BeatBox {
 	}
 
 	private void savePattern() {
+		if (isPlaying) {
+			sequencer.stop();
+		}
 		boolean[] checkboxState = new boolean[instrumentMap.size() * numberOfBeats];
 
 		for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
@@ -212,27 +217,41 @@ public class BeatBox {
 				checkboxState[i] = true;
 			}
 		}
-		try (ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream("savedPatterns/pattern.ser"))) {
-			os.writeObject(checkboxState);
-		} catch (IOException e) {
-			e.printStackTrace();
+		JFileChooser fileSave = new JFileChooser();
+		File saveFolder = new File(System.getProperty("user.dir"), "savedPatterns");
+		fileSave.setCurrentDirectory(saveFolder);
+		fileSave.showSaveDialog(frame);
+		File selectedFile = fileSave.getSelectedFile();
+		if (!(selectedFile == null)) {
+			try (ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(fileSave.getSelectedFile() + ".ser"))) {
+				os.writeObject(checkboxState);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
 	private void loadPattern() {
-		clearChecks();
-		try (ObjectInputStream is = new ObjectInputStream(new FileInputStream("savedPatterns/pattern.ser"))) {
-			boolean[] savedBoxes = (boolean[]) is.readObject();
-			for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
-				if (savedBoxes[i]) {
-					checkBoxList.get(i).setSelected(true);
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
 		if (isPlaying) {
 			sequencer.stop();
+		}
+		clearChecks();
+		JFileChooser patternOpen = new JFileChooser();
+		File loadFolder = new File(System.getProperty("user.dir"), "savedPatterns");
+		patternOpen.setCurrentDirectory(loadFolder);
+		patternOpen.showOpenDialog(frame);
+		File selectedFile = patternOpen.getSelectedFile();
+		if (!(selectedFile == null)) {
+			try (ObjectInputStream is = new ObjectInputStream(new FileInputStream(patternOpen.getSelectedFile()))) {
+				boolean[] savedBoxes = (boolean[]) is.readObject();
+				for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
+					if (savedBoxes[i]) {
+						checkBoxList.get(i).setSelected(true);
+					}
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 		}
 	}
 }

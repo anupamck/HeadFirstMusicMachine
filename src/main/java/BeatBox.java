@@ -4,6 +4,7 @@ import javax.sound.midi.Sequencer;
 import javax.sound.midi.Track;
 import javax.swing.*;
 import java.awt.*;
+import java.io.*;
 import java.util.*;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import static javax.sound.midi.ShortMessage.*;
 public class BeatBox {
 	private final Integer numberOfBeats = 16;
 	Map<String, Integer> instrumentMap = new LinkedHashMap<>();
+	private boolean isPlaying = false;
 	private ArrayList<JCheckBox> checkBoxList;
 	private Sequencer sequencer;
 	private Sequence sequence;
@@ -54,7 +56,7 @@ public class BeatBox {
 		buttonBox.add(start);
 
 		JButton stop = new JButton("Stop");
-		stop.addActionListener(e -> sequencer.stop());
+		stop.addActionListener(e -> stopPlayer());
 		buttonBox.add(stop);
 
 		JButton upTempo = new JButton("Tempo Up");
@@ -68,6 +70,14 @@ public class BeatBox {
 		JButton clear = new JButton("Clear");
 		clear.addActionListener(e -> clearChecks());
 		buttonBox.add(clear);
+
+		JButton savePattern = new JButton("Save Pattern");
+		savePattern.addActionListener(e -> savePattern());
+		buttonBox.add(savePattern);
+
+		JButton loadPattern = new JButton("Load Pattern");
+		loadPattern.addActionListener(e -> loadPattern());
+		buttonBox.add(loadPattern);
 
 		Box nameBox = new Box(BoxLayout.Y_AXIS);
 		for (String instrumentName : instrumentMap.keySet()) {
@@ -92,6 +102,7 @@ public class BeatBox {
 		for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
 			JCheckBox c = new JCheckBox();
 			c.setSelected(false);
+			c.addActionListener(e -> addCheck());
 			checkBoxList.add(c);
 			mainPanel.add(c);
 		}
@@ -101,6 +112,17 @@ public class BeatBox {
 		frame.setBounds(50, 50, 300, 300);
 		frame.pack();
 		frame.setVisible(true);
+	}
+
+	private void stopPlayer() {
+		sequencer.stop();
+		isPlaying = false;
+	}
+
+	private void addCheck() {
+		if (isPlaying) {
+			buildTrackAndStart();
+		}
 	}
 
 	private void setUpMidi() {
@@ -147,6 +169,7 @@ public class BeatBox {
 			sequencer.setLoopCount(sequencer.LOOP_CONTINUOUSLY);
 			sequencer.setTempoInBPM(120);
 			sequencer.start();
+			isPlaying = true;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -155,11 +178,17 @@ public class BeatBox {
 	private void changeTempo(float tempoMultiplier) {
 		float tempoFactor = sequencer.getTempoFactor();
 		sequencer.setTempoFactor(tempoFactor * tempoMultiplier);
+		if (isPlaying) {
+			buildTrackAndStart();
+		}
 	}
 
 	private void clearChecks() {
 		for (JCheckBox checkBox : checkBoxList) {
 			checkBox.setSelected(false);
+		}
+		if (isPlaying) {
+			sequencer.stop();
 		}
 	}
 
@@ -171,6 +200,39 @@ public class BeatBox {
 				track.add(Utility.makeEvent(NOTE_ON, 9, key, 100, i));
 				track.add(Utility.makeEvent(NOTE_OFF, 9, key, 100, i + 1));
 			}
+		}
+	}
+
+	private void savePattern() {
+		boolean[] checkboxState = new boolean[instrumentMap.size() * numberOfBeats];
+
+		for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
+			JCheckBox box = checkBoxList.get(i);
+			if (box.isSelected()) {
+				checkboxState[i] = true;
+			}
+		}
+		try (ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream("savedPatterns/pattern.ser"))) {
+			os.writeObject(checkboxState);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void loadPattern() {
+		clearChecks();
+		try (ObjectInputStream is = new ObjectInputStream(new FileInputStream("savedPatterns/pattern.ser"))) {
+			boolean[] savedBoxes = (boolean[]) is.readObject();
+			for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
+				if (savedBoxes[i]) {
+					checkBoxList.get(i).setSelected(true);
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		if (isPlaying) {
+			sequencer.stop();
 		}
 	}
 }

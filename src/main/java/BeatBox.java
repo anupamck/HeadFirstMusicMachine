@@ -6,6 +6,8 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
@@ -119,9 +121,16 @@ public class BeatBox {
 		buttonBox.add(sendIt);
 
 		userMessage = new JTextArea();
+		userMessage.addKeyListener(new KeyAdapter() {
+			public void keyPressed(KeyEvent e) {
+				handleEnter(e);
+			}
+		});
 		userMessage.setLineWrap(true);
 		userMessage.setWrapStyleWord(true);
 		JScrollPane messageScroller = new JScrollPane(userMessage);
+		messageScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		messageScroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 		buttonBox.add(messageScroller);
 
 		incomingList = new JList<>();
@@ -171,6 +180,17 @@ public class BeatBox {
 	private void addCheck() {
 		if (isPlaying) {
 			buildTrackAndStart();
+		}
+	}
+
+	private void handleEnter(KeyEvent e) {
+		if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+			if (e.isShiftDown()) {
+				userMessage.append("\n");
+			} else {
+				e.consume();
+				sendMessageAndTracks();
+			}
 		}
 	}
 

@@ -108,6 +108,10 @@ public class BeatBox {
 		clear.addActionListener(e -> clearChecks());
 		buttonBox.add(clear);
 
+		JButton makeRandom = new JButton("Make Random");
+		makeRandom.addActionListener(e -> makeRandom());
+		buttonBox.add(makeRandom);
+
 		JButton savePattern = new JButton("Save Pattern");
 		savePattern.addActionListener(e -> savePattern());
 		buttonBox.add(savePattern);
@@ -276,7 +280,22 @@ public class BeatBox {
 			checkBox.setSelected(false);
 		}
 		if (isPlaying) {
-			sequencer.stop();
+			stopPlayer();
+		}
+	}
+
+	private void makeRandom() {
+		boolean wasPlaying = isPlaying;
+		clearChecks();
+		Random rand = new Random();
+		for (JCheckBox checkBox : checkBoxList) {
+			int num = rand.nextInt(100);
+			if (num < 10) {
+				checkBox.setSelected(true);
+			}
+		}
+		if (wasPlaying) {
+			buildTrackAndStart();
 		}
 	}
 
@@ -292,9 +311,6 @@ public class BeatBox {
 	}
 
 	private void savePattern() {
-		if (isPlaying) {
-			sequencer.stop();
-		}
 		boolean[] checkboxState = new boolean[instrumentMap.size() * numberOfBeats];
 
 		for (int i = 0; i < instrumentMap.size() * numberOfBeats; i++) {
@@ -309,7 +325,7 @@ public class BeatBox {
 		fileSave.showSaveDialog(frame);
 		File selectedFile = fileSave.getSelectedFile();
 		if (!(selectedFile == null)) {
-			try (ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(fileSave.getSelectedFile() + ".ser"))) {
+			try (ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(appendFileNameWithExtension(fileSave.getSelectedFile())))) {
 				os.writeObject(checkboxState);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -317,9 +333,16 @@ public class BeatBox {
 		}
 	}
 
+	private String appendFileNameWithExtension(File filename) {
+		if (filename.getName().endsWith(".ser")) {
+			return filename.toString();
+		}
+		return filename.getName() + ".ser";
+	}
+
 	private void loadPattern() {
 		if (isPlaying) {
-			sequencer.stop();
+			stopPlayer();
 		}
 		clearChecks();
 		JFileChooser patternOpen = new JFileChooser();
@@ -356,7 +379,7 @@ public class BeatBox {
 					// now go to the map and change the sequence
 					boolean[] selectedState = otherSeqsMap.get(selected);
 					changeSequence(selectedState);
-					sequencer.stop();
+					stopPlayer();
 					buildTrackAndStart();
 				}
 			}
